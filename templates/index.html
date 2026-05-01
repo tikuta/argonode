@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argonode</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header span { font-size: 0.8rem; color: #94a3b8; background: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px; }
+
+    main {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border-bottom: 1px solid #334155;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    label { font-size: 0.82rem; color: #94a3b8; font-weight: 500; }
+    select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+    }
+    select:focus { border-color: #6366f1; }
+    select option { background: #1e293b; }
+    input[type="text"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: #6366f1; }
+
+    .input-with-btn { display: flex; gap: 0.4rem; }
+    .input-with-btn input { flex: 1; min-width: 0; }
+
+    .btn {
+      padding: 0.5rem 1.1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary{ background: #334155; color: #e2e8f0; }
+    .btn-success  { background: #16a34a; color: #fff; }
+
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+    .msg {
+      font-size: 0.83rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 6px;
+    }
+    .msg-success { background: #14532d; color: #86efac; }
+    .msg-error   { background: #450a0a; color: #fca5a5; }
+    .msg-info    { background: #1e3a5f; color: #93c5fd; }
+
+    /* Script preview */
+    .preview-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    textarea.script-preview {
+      flex: 1;
+      min-height: 340px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 0.75rem;
+      color: #a3e635;
+      font-family: "Cascadia Code", "Fira Code", monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+    }
+    textarea.script-preview:focus { border-color: #6366f1; }
+
+    .divider { border: none; border-top: 1px solid #334155; margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>&#9654; Argonode</h1>
+</header>
+
+<main>
+  <!-- ===== Settings Panel ===== -->
+  <div class="panel">
+    <div class="panel-header">Settings</div>
+    <div class="panel-body">
+
+      <div class="field">
+        <label for="lab-select">Lab Name</label>
+        <select id="lab-select" onchange="onLabSelect()">
+          <option value="" disabled selected>Loading...</option>
+        </select>
+        <input type="text" id="lab-name" placeholder="e.g. _Yamada_Lab" maxlength="64"
+               style="display:none; margin-top:0.4rem;"
+               oninput="onLabNameInput()">
+        <span id="lab-name-hint" style="display:none; font-size:0.78rem; color:#94a3b8; margin-top:0.2rem;">
+          Format: <code style="color:#a3e635;">_&lt;name&gt;_Lab</code> (e.g. _Yamada_Lab)
+        </span>
+        <span id="lab-name-err" style="display:none; font-size:0.78rem; color:#fca5a5; margin-top:0.2rem;"></span>
+      </div>
+
+      <div class="field">
+        <label>Source Folder</label>
+        <select id="folder-select" onchange="onFolderSelect()" style="width:100%;">
+          <option value="" disabled selected>-- Loading... --</option>
+        </select>
+        <input type="hidden" id="source-dir">
+      </div>
+
+      <hr class="divider">
+
+      <div id="form-msg" class="msg msg-info" style="display:none;"></div>
+      <div class="row">
+        <button class="btn btn-success" id="run-btn" onclick="runScript()" disabled>Start sync</button>
+        <button class="btn btn-secondary" id="stop-btn" onclick="stopScript()" disabled>Stop sync</button>
+        <button class="btn btn-secondary" id="check-log-btn" onclick="checkLatestLog()" disabled>Check latest log</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Script Preview ===== -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>Generated Script Preview</span>
+    </div>
+    <div class="panel-body">
+      <div class="preview-wrap">
+        <textarea class="script-preview" id="script" spellcheck="false" readonly></textarea>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = "";
+  let transferStatus = {
+    checking: false,
+    running: false,
+    message: "",
+  };
+  const FIXED_LABS = [
+    "_Furukawa_Lab",
+    "_Hanaoka_Lab",
+    "_Honda_Lab",
+    "_Matsuzaki_Lab",
+    "_Murakami_Lab",
+    "_Nureki_Lab",
+    "_Osawa_Lab",
+    "_Shihoya_Lab",
+    "_Suzuki_Lab",
+    "_Yuzaki_Lab",
+  ];
+
+  // ===== Load Lab List =====
+  function loadLabs() {
+    const sel = document.getElementById("lab-select");
+    sel.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "-- Select Lab --";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    sel.appendChild(placeholder);
+
+    for (const lab of FIXED_LABS) {
+      const opt = document.createElement("option");
+      opt.value = lab;
+      opt.textContent = lab;
+      sel.appendChild(opt);
+    }
+
+    const other = document.createElement("option");
+    other.value = "__other__";
+    other.textContent = "Other (manual input)";
+    sel.appendChild(other);
+
+    onLabSelect();
+  }
+
+  function onLabSelect() {
+    const sel    = document.getElementById("lab-select");
+    const manual = document.getElementById("lab-name");
+    const hint   = document.getElementById("lab-name-hint");
+    const err    = document.getElementById("lab-name-err");
+    if (sel.value === "__other__") {
+      manual.style.display = "block";
+      hint.style.display   = "block";
+    } else {
+      manual.style.display = "none";
+      hint.style.display   = "none";
+      err.style.display    = "none";
+      manual.value = "";
+    }
+    updatePreview();
+  }
+
+  const LAB_RE = /^_[^_].+_Lab$/;
+
+  function onLabNameInput() {
+    const input = document.getElementById("lab-name");
+    const err   = document.getElementById("lab-name-err");
+    const val   = input.value.trim();
+    if (val && !LAB_RE.test(val)) {
+      err.textContent = `"${val}" does not match the _*_Lab format`;
+      err.style.display = "block";
+    } else {
+      err.style.display = "none";
+    }
+    updatePreview();
+  }
+
+  function getSelectedLabName() {
+    const sel = document.getElementById("lab-select");
+    if (sel.value === "__other__") {
+      return document.getElementById("lab-name").value.trim();
+    }
+    return sel.value ? sel.value.trim() : "";
+  }
+
+  function normalizeUnitPart(value) {
+    return String(value)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.@-]+/g, "-")
+      .replace(/^[-.]+|[-.]+$/g, "");
+  }
+
+  // ===== Build Script =====
+  function buildScript(folderName) {
+    const src  = escSh(folderName);
+    const labName = escSh(getSelectedLabName());
+    const scriptName = (labName && src)
+      ? normalizeUnitPart(labName) + "-" + normalizeUnitPart(src)
+      : "<lab>-<folder>";
+    return `#!/bin/bash
+SOURCE_DIR="/offload/${src}"
+DEST_DIR="/raid6/em/kriosdata/${labName}/${src}"
+DATE=$(date +%Y%m%d_%H%M)
+ARCHIVE_DIR="/raid6/em/kriosdata/.archive/${labName}/${src}/$DATE" 
+LOG_FILE="$DEST_DIR/rclone_log_$DATE.json"
+
+while true; do
+    /usr/bin/rclone sync "$SOURCE_DIR" "$DEST_DIR" \\
+        --track-renames \\
+        --track-renames-strategy hash \\
+        --transfers 4 \\
+        --min-age 1m \\
+        --use-mmap \\
+        --backup-dir "$ARCHIVE_DIR" \\
+        --use-json-log \\
+        --log-file "$LOG_FILE" \\
+        --log-level INFO \\
+        --exclude "*.sh" \\
+        --exclude "*.json"
+    TRANSFERRED_BYTES=$(/usr/bin/jq -s 'map(select(.stats.bytes != null)) | last | .stats.bytes' "$LOG_FILE")
+    if [[ "$TRANSFERRED_BYTES" == "0" ]]; then
+        break
+    else
+        sleep 300
+    fi
+done
+
+# Remove empty archive dir if no files were moved there
+rmdir "$ARCHIVE_DIR" 2>/dev/null
+
+# /bin/bash $DEST_DIR/${scriptName}.sh
+
+`;
+  }
+
+  function updateRunBtn() {
+    const labName = getSelectedLabName();
+    const folder = document.getElementById("source-dir").value.trim();
+    const runBtn = document.getElementById("run-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const logBtn = document.getElementById("check-log-btn");
+    runBtn.disabled = !(labName && folder) || transferStatus.checking || transferStatus.running;
+    stopBtn.disabled = !labName || !folder || transferStatus.checking || !transferStatus.running;
+    logBtn.disabled = !folder;
+  }
+
+  async function updatePreview() {
+    const folder = document.getElementById("source-dir").value;
+    document.getElementById("script").value = buildScript(folder);
+    updateRunBtn();
+    await refreshTransferStatus();
+  }
+
+  async function refreshTransferStatus() {
+    const labName = getSelectedLabName();
+    const sourceFolder = document.getElementById("source-dir").value.trim();
+
+    if (!labName || !sourceFolder) {
+      transferStatus = { checking: false, running: false, message: "" };
+      updateRunBtn();
+      return;
+    }
+
+    transferStatus = { checking: true, running: false, message: "" };
+    updateRunBtn();
+
+    try {
+      const params = new URLSearchParams({ source_folder: sourceFolder, lab_name: labName });
+      const res = await fetch(`${API}/api/latest-log?${params.toString()}`);
+      const data = await res.json();
+      transferStatus = {
+        checking: false,
+        running: !!data.is_running,
+        message: data.is_running ? "Transfer is still running for this lab and folder." : "",
+      };
+      if (data.is_running) {
+        showFormMsg(transferStatus.message, "info");
+      }
+    } catch (e) {
+      transferStatus = { checking: false, running: false, message: "" };
+    } finally {
+      updateRunBtn();
+    }
+  }
+
+  // Escape shell string values by removing risky characters.
+  function escSh(str) {
+    // Remove double-quote, backtick, dollar, and backslash.
+    return String(str).replace(/["`\\$]/g, "");
+  }
+
+  // ===== Folder Blacklist (client-side filter) =====
+  const FOLDER_BLACKLIST = [
+    // Add folder names to hide from the list, e.g.:
+    // "test_folder",
+    "applications",
+    "CryoSparc",
+    "EM_facility",
+    "exportData",
+    "gain_ref_list",
+    "ImagesForProcessing",
+    "prerequisite",
+    "Site_acceptance_test",
+    ".athena",
+  ];
+  // Folders matching this pattern are also hidden.
+  const FOLDER_BLACKLIST_RE = /^_[^_].+_Lab$/;
+
+  // ===== Folder List (Server-side /offload) =====
+  async function loadFolders() {
+    const sel = document.getElementById("folder-select");
+    try {
+      const res = await fetch(API + "/api/folders");
+      const data = await res.json();
+      sel.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "-- Select Folder --";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      sel.appendChild(placeholder);
+      for (const folder of (data.folders || [])) {
+        if (FOLDER_BLACKLIST.includes(folder) || FOLDER_BLACKLIST_RE.test(folder)) continue;
+        const opt = document.createElement("option");
+        opt.value = folder;
+        opt.textContent = folder;
+        sel.appendChild(opt);
+      }
+    } catch (e) {
+      sel.innerHTML = '<option value="" disabled selected>-- Failed to load --</option>';
+    }
+  }
+
+  function onFolderSelect() {
+    const sel = document.getElementById("folder-select");
+    document.getElementById("source-dir").value = sel.value || "";
+    updatePreview();
+  }
+
+  async function runScript() {
+    const script = document.getElementById("script").value.trim();
+    const sel = document.getElementById("lab-select");
+    const labName = getSelectedLabName();
+    const sourceFolder = document.getElementById("source-dir").value.trim();
+
+    if (sel.value === "__other__") {
+      const labVal = document.getElementById("lab-name").value.trim();
+      if (labVal && !LAB_RE.test(labVal)) {
+        showFormMsg("Invalid lab name. Use _*_Lab format (e.g. _Yamada_Lab).", "error");
+        return;
+      }
+    }
+    if (!labName) {
+      showFormMsg("Please select a lab name.", "error");
+      return;
+    }
+    if (!sourceFolder) {
+      showFormMsg("Please select a source folder.", "error");
+      return;
+    }
+    if (!script) {
+      showFormMsg("Script is empty.", "error");
+      return;
+    }
+
+    const btn = document.getElementById("run-btn");
+    btn.disabled = true;
+    showFormMsg("Starting...", "info");
+    try {
+      const res = await fetch(`${API}/api/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ script, lab_name: labName, source_folder: sourceFolder }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "failed to start script");
+      const lines = [
+        `PID:    ${data.pid}`,
+      ];
+      lines.push("Check your data in Z: drive!");
+      transferStatus = {
+        checking: false,
+        running: true,
+        message: "Transfer is still running for this lab and folder.",
+      };
+      showFormMsg(lines.join("\n"), "success");
+    } catch (e) {
+      showFormMsg(`Error: ${e.message}`, "error");
+    } finally {
+      updateRunBtn();
+    }
+  }
+
+  async function stopScript() {
+    const labName = getSelectedLabName();
+    const sourceFolder = document.getElementById("source-dir").value.trim();
+    if (!labName) {
+      showFormMsg("Please select a lab name.", "error");
+      return;
+    }
+    if (!sourceFolder) {
+      showFormMsg("Please select a source folder.", "error");
+      return;
+    }
+
+    transferStatus.checking = true;
+    updateRunBtn();
+    showFormMsg("Stopping transfer...", "info");
+    try {
+      const res = await fetch(`${API}/api/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lab_name: labName, source_folder: sourceFolder }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "failed to stop transfer");
+
+      const lines = [data.message || "Stop signal sent"];
+      if (data.stopped_pids && data.stopped_pids.length > 0) {
+        lines.push(`PIDs:   ${data.stopped_pids.join(", ")}`);
+      }
+      if (data.errors && data.errors.length > 0) {
+        lines.push(`Errors: ${data.errors.join("; ")}`);
+      }
+      showFormMsg(lines.join("\n"), "info");
+    } catch (e) {
+      showFormMsg(`Error: ${e.message}`, "error");
+    } finally {
+      transferStatus = { checking: false, running: false, message: "" };
+      await refreshTransferStatus();
+    }
+  }
+
+  async function checkLatestLog() {
+    const sourceFolder = document.getElementById("source-dir").value.trim();
+    const labName = getSelectedLabName();
+    if (!sourceFolder) {
+      showFormMsg("Please select a source folder.", "error");
+      return;
+    }
+
+    const btn = document.getElementById("check-log-btn");
+    btn.disabled = true;
+    showFormMsg("Checking latest log...", "info");
+    try {
+      const params = new URLSearchParams({ source_folder: sourceFolder, lab_name: labName });
+      const res = await fetch(`${API}/api/latest-log?${params.toString()}`);
+      const data = await res.json();
+      transferStatus = {
+        checking: false,
+        running: !!data.is_running,
+        message: data.is_running ? "Transfer is still running for this lab and folder." : "",
+      };
+      if (!res.ok) throw new Error(data.error || "failed to get latest log");
+
+      const when = new Date((data.mtime || 0) * 1000).toLocaleString();
+      const body = (data.formatted_log || "").trim();
+      const lines = [
+        `Latest log: ${data.log_path}`,
+        `Updated:    ${when}`,
+        `Size:       ${data.size_bytes} bytes`,
+        "",
+        body || "(log is empty)",
+      ];
+      if (data.is_running) {
+        lines.splice(3, 0, "Status:     transfer in progress");
+      }
+      showFormMsg(lines.join("\n"), "info");
+    } catch (e) {
+      transferStatus = { checking: false, running: false, message: "" };
+      showFormMsg(`Error: ${e.message}`, "error");
+    } finally {
+      updateRunBtn();
+    }
+  }
+
+  function showFormMsg(text, type) {
+    const el = document.getElementById("form-msg");
+    el.textContent = text;
+    el.className = `msg msg-${type}`;
+    el.style.display = "block";
+    el.style.whiteSpace = "pre-wrap";
+  }
+
+  // ===== Init =====
+  loadLabs();
+  loadFolders();
+  updatePreview();
+</script>
+</body>
+</html>
